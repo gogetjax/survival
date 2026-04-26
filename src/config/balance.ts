@@ -78,6 +78,21 @@ export const HUD = {
   FOG_FAR: 180,
 } as const;
 
+export const SPRITE = {
+  mutantHeight: 2.4,
+  mutantAspectFallback: 0.6,
+  // Each mutant PNG is a 3-col x 4-row contact sheet; we crop to a single cell
+  // (top-left) so the billboard shows one creature, not a tiled grid.
+  mutantAtlasCols: 3,
+  mutantAtlasRows: 4,
+  mutantAtlasCellCol: 0,
+  mutantAtlasCellRow: 0,
+  playerHeight: 1.9,
+  playerAspectFallback: 0.55,
+  playerAtlasCols: 3,
+  playerAtlasRows: 3,
+} as const;
+
 export const COLORS = {
   TERRAIN_SAND: 0xc7a36a,
   TERRAIN_GRASS: 0x4a6a32,

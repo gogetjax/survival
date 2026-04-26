@@ -181,3 +181,5 @@ html, body {
   border: 1px solid #c89742; padding: 12px 28px;
 }
 #start-screen.hidden { display: none; }
+#start-screen.loading { cursor: wait; pointer-events: none; }
+#start-screen.loading .prompt { color: #6a4a22; border-color: #6a4a22; }

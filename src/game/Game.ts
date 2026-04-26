@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { HUD as HUD_CFG } from '@/config/balance';
+import { ASSET_PATHS } from '@/config/assets';
 import { GameLoop } from '@/game/GameLoop';
 import { HUD } from '@/hud/HUD';
 import { InputManager } from '@/input/InputManager';
@@ -32,7 +33,11 @@ export class Game {
   private readonly loop: GameLoop;
   readonly save: SaveManager;
 
-  constructor(canvas: HTMLCanvasElement, hudRoot: HTMLElement) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    hudRoot: HTMLElement,
+    textures: Map<string, THREE.Texture>,
+  ) {
     this.canvas = canvas;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -49,8 +54,10 @@ export class Game {
     this.stars = new Stars();
     this.scene.add(terrain.mesh, ocean.mesh, trees.group, rocks.group, this.stars.points);
 
-    this.player = new Player();
-    this.scene.add(this.player.body);
+    const playerAtlas = textures.get(ASSET_PATHS.players.player1);
+    if (!playerAtlas) throw new Error('Game: missing player1 texture');
+    this.player = new Player(playerAtlas);
+    this.scene.add(this.player.object3d);
 
     this.input = new InputManager(canvas, (code) => {
       if (code === 'KeyV') {
@@ -62,7 +69,7 @@ export class Game {
     this.controller = new PlayerController(this.player, this.input);
     this.cycle = new DayNightCycle();
     this.sky = new SkySystem(this.scene, this.stars);
-    this.mutants = new MutantManager(this.scene);
+    this.mutants = new MutantManager(this.scene, textures);
 
     this.hud = new HUD(hudRoot);
     this.hud.setView(this.player.view);
@@ -88,6 +95,7 @@ export class Game {
     this.controller.update(dt);
     const threat = this.mutants.update(dt, this.player, this.cycle.state);
     this.camera.update();
+    this.player.syncSprite(this.camera.camera.position);
     this.hud.update(this.player, this.cycle.state, threat, this.mutants.mutants);
     this.renderer.render(this.scene, this.camera.camera);
   }

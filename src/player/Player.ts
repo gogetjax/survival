@@ -1,7 +1,8 @@
 import * as THREE from 'three';
-import { COLORS, PLAYER } from '@/config/balance';
+import { PLAYER, SPRITE } from '@/config/balance';
 import { getHeight } from '@/world/heightmap';
 import { makeFreshStats } from '@/player/SurvivalStats';
+import { PlayerSprite } from '@/player/PlayerSprite';
 import type { SurvivalStats, ViewMode } from '@/types';
 
 export class Player {
@@ -11,39 +12,18 @@ export class Player {
   pitch = 0;
   onGround = false;
   view: ViewMode = 'first';
-  readonly body: THREE.Group;
+  readonly sprite: PlayerSprite;
   stats: SurvivalStats = makeFreshStats();
 
-  constructor() {
-    this.body = this.buildBody();
+  constructor(atlas: THREE.Texture) {
+    this.sprite = new PlayerSprite(atlas);
+    this.sprite.sprite.visible = false;
     this.spawnOnBeach();
   }
 
-  private buildBody(): THREE.Group {
-    const group = new THREE.Group();
-    const skinMat = new THREE.MeshLambertMaterial({ color: COLORS.PLAYER_SKIN });
-    const shirtMat = new THREE.MeshLambertMaterial({ color: COLORS.PLAYER_SHIRT });
-    const pantsMat = new THREE.MeshLambertMaterial({ color: COLORS.PLAYER_PANTS });
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.4), shirtMat);
-    torso.position.y = -0.4;
-    group.add(torso);
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.36, 0.36), skinMat);
-    head.position.y = 0.18;
-    group.add(head);
-    const armL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.7, 0.18), shirtMat);
-    armL.position.set(-0.4, -0.4, 0);
-    group.add(armL);
-    const armR = armL.clone();
-    armR.position.x = 0.4;
-    group.add(armR);
-    const legL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.85, 0.2), pantsMat);
-    legL.position.set(-0.16, -1.25, 0);
-    group.add(legL);
-    const legR = legL.clone();
-    legR.position.x = 0.16;
-    group.add(legR);
-    group.visible = false;
-    return group;
+  /** The Object3D to add to the scene. */
+  get object3d(): THREE.Object3D {
+    return this.sprite.sprite;
   }
 
   spawnOnBeach(): void {
@@ -59,15 +39,19 @@ export class Player {
 
   setView(view: ViewMode): void {
     this.view = view;
-    this.body.visible = view === 'third';
+    this.sprite.sprite.visible = view === 'third';
   }
 
   toggleView(): void {
     this.setView(this.view === 'first' ? 'third' : 'first');
   }
 
-  syncBodyTransform(): void {
-    this.body.position.set(this.pos.x, this.pos.y - PLAYER.EYE_HEIGHT + 1.0, this.pos.z);
-    this.body.rotation.y = this.yaw;
+  /** Position the sprite at the player's feet+halfHeight and orient via the camera angle. */
+  syncSprite(cameraPos: THREE.Vector3): void {
+    const groundY = this.pos.y - PLAYER.EYE_HEIGHT;
+    this.sprite.sprite.position.set(this.pos.x, groundY + SPRITE.playerHeight / 2, this.pos.z);
+    if (this.view === 'third') {
+      this.sprite.update(this.yaw, this.sprite.sprite.position, cameraPos);
+    }
   }
 }
