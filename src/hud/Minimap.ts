@@ -4,7 +4,6 @@ import type { Mutant } from '@/entities/Mutant';
 import type { Player } from '@/player/Player';
 
 export class Minimap {
-  private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
   private readonly islandBmp: HTMLCanvasElement;
   private readonly px: number;
@@ -12,7 +11,6 @@ export class Minimap {
   constructor(parent: HTMLElement) {
     const el = parent.querySelector<HTMLCanvasElement>('#minimap');
     if (!el) throw new Error('Minimap: #minimap not found');
-    this.canvas = el;
     const ctx = el.getContext('2d');
     if (!ctx) throw new Error('Minimap: 2d context unavailable');
     this.ctx = ctx;
