@@ -4,7 +4,7 @@ import { MUTANT_VARIANT_URLS } from '@/config/assets';
 import { createMutantSprite } from '@/entities/MutantSpriteFactory';
 import { getHeight } from '@/world/heightmap';
 import { isNight, type TimeState } from '@/time/DayNightCycle';
-import type { Mutant } from '@/entities/Mutant';
+import { tickCombat, type Mutant } from '@/entities/Mutant';
 import type { Player } from '@/player/Player';
 import type { ThreatInfo } from '@/types';
 
@@ -31,6 +31,7 @@ export class MutantManager {
         target: new THREE.Vector2(cx, cz),
         repick: 0,
         aware: false,
+        attackCooldown: 0,
         variantUrl,
       });
     }
@@ -38,8 +39,7 @@ export class MutantManager {
 
   update(dt: number, player: Player, time: TimeState): ThreatInfo {
     let nearest = Infinity;
-    const detectRadius =
-      MUTANT.DETECTION_RADIUS * (isNight(time.hour) ? MUTANT.NIGHT_DETECTION_BONUS : 1);
+    const night = isNight(time.hour);
     for (const m of this.mutants) {
       m.repick -= dt;
       if (m.repick <= 0) {
@@ -53,10 +53,19 @@ export class MutantManager {
       const pdx = player.pos.x - m.sprite.position.x;
       const pdz = player.pos.z - m.sprite.position.z;
       const pd = Math.hypot(pdx, pdz);
-      m.aware = pd < detectRadius;
 
-      if (m.aware && pd > 0) {
-        const v = MUTANT.PATROL_SPEED * MUTANT.CHASE_SPEED_MULT * dt;
+      const tick = tickCombat(m.attackCooldown, pd, night, dt);
+      m.attackCooldown = tick.attackCooldown;
+      m.aware = pd < MUTANT.DETECTION_RADIUS;
+
+      if (tick.attacked) {
+        player.takeMeleeHit(MUTANT.ATTACK_DAMAGE, m);
+      }
+
+      if (pd < MUTANT.ATTACK_RADIUS) {
+        // In melee range — hold position, don't walk through the player.
+      } else if (tick.shouldChase && pd > 0) {
+        const v = MUTANT.CHASE_SPEED * dt;
         m.sprite.position.x += (pdx / pd) * v;
         m.sprite.position.z += (pdz / pd) * v;
       } else {
