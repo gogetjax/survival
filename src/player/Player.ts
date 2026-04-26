@@ -3,9 +3,15 @@ import { PLAYER, SPRITE } from '@/config/balance';
 import { getHeight } from '@/world/heightmap';
 import { makeFreshStats } from '@/player/SurvivalStats';
 import { PlayerSprite } from '@/player/PlayerSprite';
+import type { Mutant } from '@/entities/Mutant';
 import type { SurvivalStats, ViewMode } from '@/types';
 
-export class Player {
+export interface MeleeHitDetail {
+  damage: number;
+  source: Mutant;
+}
+
+export class Player extends EventTarget {
   readonly pos = new THREE.Vector3();
   readonly vel = new THREE.Vector3();
   yaw = 0;
@@ -16,6 +22,7 @@ export class Player {
   stats: SurvivalStats = makeFreshStats();
 
   constructor(atlas: THREE.Texture) {
+    super();
     this.sprite = new PlayerSprite(atlas);
     this.sprite.sprite.visible = false;
     this.spawnOnBeach();
@@ -44,6 +51,17 @@ export class Player {
 
   toggleView(): void {
     this.setView(this.view === 'first' ? 'third' : 'first');
+  }
+
+  /**
+   * Apply a melee swing's worth of armor damage and emit a `meleeHit` event
+   * so the HUD can react (flash, sound, etc.) without the Player owning view code.
+   */
+  takeMeleeHit(damage: number, source: Mutant): void {
+    this.stats.armor = Math.max(0, this.stats.armor - damage);
+    this.dispatchEvent(
+      new CustomEvent<MeleeHitDetail>('meleeHit', { detail: { damage, source } }),
+    );
   }
 
   /** Position the sprite at the player's feet+halfHeight and orient via the camera angle. */

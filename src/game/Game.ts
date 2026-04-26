@@ -77,6 +77,7 @@ export class Game {
       const detail = (e as CustomEvent<{ day: number }>).detail;
       this.hud.showBanner(`Day ${detail.day}`, 'You wake again.');
     });
+    this.player.addEventListener('meleeHit', () => this.hud.fx.flashDamage());
 
     this.save = new SaveManager();
 
