@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Survivor: Of the Forgotten Isle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Special+Elite&family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles/hud.css" />
+  </head>
+  <body>
+    <canvas id="game-canvas"></canvas>
+    <div id="hud">
+      <div id="energy-bars">
+        <div class="bar" data-stat="stamina">
+          <div class="bar-label"><span>Stamina</span><span class="bar-value">100</span></div>
+          <div class="bar-fill-wrap"><div class="bar-fill"></div></div>
+        </div>
+        <div class="bar" data-stat="armor">
+          <div class="bar-label"><span>Armor</span><span class="bar-value">100</span></div>
+          <div class="bar-fill-wrap"><div class="bar-fill"></div></div>
+        </div>
+        <div class="bar" data-stat="food">
+          <div class="bar-label"><span>Food</span><span class="bar-value">100</span></div>
+          <div class="bar-fill-wrap"><div class="bar-fill"></div></div>
+        </div>
+        <div class="bar" data-stat="drink">
+          <div class="bar-label"><span>Drink</span><span class="bar-value">100</span></div>
+          <div class="bar-fill-wrap"><div class="bar-fill"></div></div>
+        </div>
+      </div>
+
+      <div id="time-panel">
+        <div class="heading">Day <span id="day-num">1</span></div>
+        <div class="row"><span class="label">Time</span><span id="game-time">06:00</span></div>
+        <div class="row"><span class="label">Phase</span><span id="phase">Dawn</span></div>
+        <div class="row"><span class="label">Real</span><span id="real-time">00:00</span></div>
+        <div class="row"><span class="label">Speed</span><span id="speed-mult">x30</span></div>
+      </div>
+
+      <div id="minimap-wrap">
+        <canvas id="minimap" width="180" height="180"></canvas>
+        <div id="minimap-label">Isle Map</div>
+      </div>
+
+      <div id="hotbar">
+        <div class="slot active"><span class="num">1</span>—</div>
+        <div class="slot"><span class="num">2</span>—</div>
+        <div class="slot"><span class="num">3</span>—</div>
+        <div class="slot"><span class="num">4</span>—</div>
+        <div class="slot"><span class="num">5</span>—</div>
+        <div class="slot"><span class="num">6</span>—</div>
+      </div>
+
+      <div id="view-mode">First Person</div>
+
+      <div id="banner">
+        <div class="title"></div>
+        <div class="sub"></div>
+      </div>
+
+      <div id="threat">Calm</div>
+      <div id="crosshair"></div>
+
+      <div id="controls-help">
+        <div>
+          <span class="key">WASD</span> move &middot;
+          <span class="key">SHIFT</span> sprint &middot;
+          <span class="key">SPACE</span> jump
+        </div>
+        <div>
+          <span class="key">V</span> camera &middot;
+          <span class="key">MOUSE</span> look &middot;
+          <span class="key">ESC</span> release
+        </div>
+      </div>
+
+      <div id="fx-overlay"></div>
+    </div>
+
+    <div id="start-screen">
+      <h1>Survivor</h1>
+      <div class="tag">— Of the Forgotten Isle —</div>
+      <div class="prompt">Click to begin</div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
