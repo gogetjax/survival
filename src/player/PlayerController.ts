@@ -57,7 +57,6 @@ export class PlayerController {
       p.vel.y = 0;
       p.onGround = true;
     }
-    p.syncBodyTransform();
 
     p.stats.stamina = updateStamina(p.stats.stamina, sprinting, dt);
     p.stats = updateNeeds(p.stats, dt);

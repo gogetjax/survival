@@ -47,8 +47,8 @@ export class Minimap {
   draw(player: Player, mutants: ReadonlyArray<Mutant>): void {
     this.ctx.drawImage(this.islandBmp, 0, 0);
     for (const m of mutants) {
-      const px = this.px * (0.5 + m.group.position.x / (2 * HUD.MAP_RANGE));
-      const py = this.px * (0.5 + m.group.position.z / (2 * HUD.MAP_RANGE));
+      const px = this.px * (0.5 + m.sprite.position.x / (2 * HUD.MAP_RANGE));
+      const py = this.px * (0.5 + m.sprite.position.z / (2 * HUD.MAP_RANGE));
       this.ctx.fillStyle = m.aware ? '#ff6b3d' : '#a04030';
       this.ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
     }
