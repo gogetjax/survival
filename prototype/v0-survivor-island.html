@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Survivor: Of the Forgotten Isle — v0 prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Special+Elite&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #050402; color: #e8b557;
+    font-family: 'Special Elite', monospace;
+    user-select: none;
+  }
+  #game-canvas { display: block; width: 100vw; height: 100vh; }
+  #hud { position: fixed; inset: 0; pointer-events: none; }
+
+  /* ----- Energy bars (top-left) ----- */
+  #energy-bars { position: absolute; top: 18px; left: 18px; width: 240px; }
+  .bar {
+    margin-bottom: 8px; padding: 6px 10px;
+    background: rgba(8, 6, 4, 0.85);
+    border: 1px solid rgba(232, 181, 87, 0.5);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%);
+  }
+  .bar-label {
+    font-family: 'Cinzel', serif; font-weight: 600;
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: #e8b557; margin-bottom: 4px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .bar-value { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #c89742; }
+  .bar-fill-wrap {
+    width: 100%; height: 8px;
+    background: rgba(40, 28, 16, 0.9);
+    border: 1px solid rgba(80, 50, 25, 0.7);
+  }
+  .bar-fill {
+    height: 100%; width: 100%;
+    background: linear-gradient(90deg, #b8862f 0%, #e8b557 100%);
+    transition: width 0.18s ease;
+  }
+  .bar-fill.low { background: linear-gradient(90deg, #6a2b1c 0%, #b54a2a 100%); }
+
+  /* ----- Time panel (top-right) ----- */
+  #time-panel {
+    position: absolute; top: 18px; right: 18px;
+    background: rgba(8, 6, 4, 0.85);
+    border: 1px solid rgba(232, 181, 87, 0.5);
+    padding: 10px 14px; min-width: 220px;
+    clip-path: polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px);
+  }
+  #time-panel .heading {
+    font-family: 'Cinzel', serif; font-weight: 800;
+    font-size: 14px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: #e8b557; margin-bottom: 6px; text-align: center;
+  }
+  #time-panel .row {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: #c89742;
+    display: flex; justify-content: space-between; margin: 2px 0;
+  }
+  #time-panel .row .label { color: #8a6a32; }
+
+  /* ----- Minimap (bottom-right) ----- */
+  #minimap-wrap { position: absolute; bottom: 18px; right: 18px; }
+  #minimap {
+    width: 180px; height: 180px; display: block;
+    background: rgba(8, 6, 4, 0.85);
+    border: 1px solid rgba(232, 181, 87, 0.5);
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  }
+  #minimap-label {
+    font-family: 'Cinzel', serif; font-size: 10px;
+    letter-spacing: 0.18em; text-transform: uppercase; color: #8a6a32;
+    text-align: center; margin-top: 4px;
+  }
+
+  /* ----- Hotbar (bottom-center) ----- */
+  #hotbar {
+    position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px;
+  }
+  .slot {
+    width: 44px; height: 44px;
+    background: rgba(8, 6, 4, 0.85);
+    border: 1px solid rgba(232, 181, 87, 0.4);
+    font-family: 'Cinzel', serif; font-size: 11px; color: #8a6a32;
+    display: flex; align-items: center; justify-content: center; position: relative;
+  }
+  .slot.active {
+    border-color: #e8b557; color: #e8b557;
+    box-shadow: inset 0 0 8px rgba(232, 181, 87, 0.3);
+  }
+  .slot .num {
+    position: absolute; top: 2px; left: 4px;
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #6a4a22;
+  }
+
+  /* ----- View mode (top-center) ----- */
+  #view-mode {
+    position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+    font-family: 'Cinzel', serif; font-size: 11px;
+    letter-spacing: 0.2em; text-transform: uppercase; color: #8a6a32;
+    background: rgba(8, 6, 4, 0.7); padding: 4px 12px;
+    border: 1px solid rgba(232, 181, 87, 0.3);
+  }
+
+  /* ----- Banner (centered) ----- */
+  #banner {
+    position: absolute; top: 22%; left: 50%; transform: translateX(-50%);
+    text-align: center; opacity: 0; transition: opacity 0.4s ease;
+  }
+  #banner.visible { opacity: 1; }
+  #banner .title {
+    font-family: 'Cinzel', serif; font-weight: 800;
+    font-size: 32px; letter-spacing: 0.18em; color: #e8b557;
+    text-shadow: 0 2px 16px rgba(0,0,0,0.9);
+  }
+  #banner .sub {
+    font-family: 'Special Elite', monospace; font-size: 14px;
+    color: #c89742; margin-top: 6px;
+  }
+
+  /* ----- Threat indicator (bottom-left) ----- */
+  #threat {
+    position: absolute; bottom: 18px; left: 18px;
+    font-family: 'Cinzel', serif; font-size: 11px;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 6px 12px;
+    background: rgba(8, 6, 4, 0.85);
+    border: 1px solid rgba(232, 181, 87, 0.4);
+    color: #8a6a32;
+  }
+  #threat.alert { color: #e8b557; border-color: #e8b557; }
+  #threat.danger {
+    color: #ff6b3d; border-color: #ff6b3d;
+    animation: pulse 0.8s infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+  /* ----- Crosshair ----- */
+  #crosshair {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px; height: 14px; opacity: 0.7;
+  }
+  #crosshair::before, #crosshair::after { content: ''; position: absolute; background: #e8b557; }
+  #crosshair::before { left: 50%; top: 0; width: 1px; height: 100%; transform: translateX(-50%); }
+  #crosshair::after { top: 50%; left: 0; height: 1px; width: 100%; transform: translateY(-50%); }
+
+  /* ----- Controls help (above threat indicator) ----- */
+  #controls-help {
+    position: absolute; bottom: 60px; left: 18px;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    color: #6a4a22; line-height: 1.6;
+  }
+  #controls-help .key { color: #8a6a32; font-weight: 700; }
+
+  /* ----- FX overlay (vignette / damage flash) ----- */
+  #fx-overlay {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%);
+    transition: opacity 0.5s ease;
+  }
+  #fx-overlay.damage {
+    background: radial-gradient(ellipse at center, transparent 30%, rgba(120, 20, 10, 0.5) 100%);
+  }
+
+  /* ----- Start screen ----- */
+  #start-screen {
+    position: fixed; inset: 0; background: #050402;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 1000; cursor: pointer;
+  }
+  #start-screen h1 {
+    font-family: 'Cinzel', serif; font-weight: 800;
+    font-size: 48px; letter-spacing: 0.2em; color: #e8b557;
+    text-align: center; margin-bottom: 16px;
+  }
+  #start-screen .tag {
+    font-family: 'Special Elite', monospace; font-size: 14px;
+    color: #8a6a32; margin-bottom: 36px;
+  }
+  #start-screen .prompt {
+    font-family: 'Cinzel', serif; font-size: 14px;
+    letter-spacing: 0.2em; color: #c89742;
+    border: 1px solid #c89742; padding: 12px 28px;
+  }
+  #start-screen.hidden { display: none; }
+</style>
+</head>
+<body>
+<canvas id="game-canvas"></canvas>
+<div id="hud">
+  <div id="energy-bars">
+    <div class="bar" data-stat="stamina">
+      <div class="bar-label"><span>Stamina</span><span class="bar-value">100</span></div>
+      <div class="bar-fill-wrap"><div class="bar-fill"></div></div>
+    </div>
+    <div class="bar" data-stat="armor">
+      <div class="bar-label"><span>Armor</span><span class="bar-value">100</span></div>
+      <div class="bar-fill-wrap"><div class="bar-fill"></div></div>
+    </div>
+    <div class="bar" data-stat="food">
+      <div class="bar-label"><span>Food</span><span class="bar-value">100</span></div>
+      <div class="bar-fill-wrap"><div class="bar-fill"></div></div>
+    </div>
+    <div class="bar" data-stat="drink">
+      <div class="bar-label"><span>Drink</span><span class="bar-value">100</span></div>
+      <div class="bar-fill-wrap"><div class="bar-fill"></div></div>
+    </div>
+  </div>
+
+  <div id="time-panel">
+    <div class="heading">Day <span id="day-num">1</span></div>
+    <div class="row"><span class="label">Time</span><span id="game-time">06:00</span></div>
+    <div class="row"><span class="label">Phase</span><span id="phase">Dawn</span></div>
+    <div class="row"><span class="label">Real</span><span id="real-time">00:00</span></div>
+    <div class="row"><span class="label">Speed</span><span id="speed-mult">x30</span></div>
+  </div>
+
+  <div id="minimap-wrap">
+    <canvas id="minimap" width="180" height="180"></canvas>
+    <div id="minimap-label">Isle Map</div>
+  </div>
+
+  <div id="hotbar">
+    <div class="slot active"><span class="num">1</span>—</div>
+    <div class="slot"><span class="num">2</span>—</div>
+    <div class="slot"><span class="num">3</span>—</div>
+    <div class="slot"><span class="num">4</span>—</div>
+    <div class="slot"><span class="num">5</span>—</div>
+    <div class="slot"><span class="num">6</span>—</div>
+  </div>
+
+  <div id="view-mode">First Person</div>
+
+  <div id="banner">
+    <div class="title"></div>
+    <div class="sub"></div>
+  </div>
+
+  <div id="threat">Calm</div>
+  <div id="crosshair"></div>
+
+  <div id="controls-help">
+    <div><span class="key">WASD</span> move &middot; <span class="key">SHIFT</span> sprint &middot; <span class="key">SPACE</span> jump</div>
+    <div><span class="key">V</span> camera &middot; <span class="key">MOUSE</span> look &middot; <span class="key">ESC</span> release</div>
+  </div>
+
+  <div id="fx-overlay"></div>
+</div>
+
+<div id="start-screen">
+  <h1>Survivor</h1>
+  <div class="tag">— Of the Forgotten Isle —</div>
+  <div class="prompt">Click to begin</div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ===========================================================================
+// BALANCE — every tunable lives here in the prototype, will move to balance.ts
+// ===========================================================================
+const TIME_GAME_HOURS_PER_DAY      = 15;
+const TIME_REAL_MIN_PER_GAME_HOUR  = 5;     // spec speed: 1 game hr = 5 real min
+const DEMO_SPEED_MULT              = 30;    // visible cycle for prototype/demo
+const TIME_GAME_HOURS_PER_REAL_SEC = (1 / (TIME_REAL_MIN_PER_GAME_HOUR * 60)) * DEMO_SPEED_MULT;
+const TIME_DAY_START_HOUR          = 0.0;   // hour 0 = dawn
+const TIME_DAYLIGHT_HOURS          = 8;
+const TIME_NIGHT_HOURS             = 7;
+
+const STATS_FOOD_DECAY_PER_HR              = 1.2;
+const STATS_DRINK_DECAY_PER_HR             = 1.8;
+const STATS_STAMINA_SPRINT_DRAIN_PER_SEC   = 12;
+const STATS_STAMINA_REGEN_PER_SEC          = 6;
+const STATS_STARVE_ARMOR_DRAIN_PER_HR      = 4;
+
+const PLAYER_WALK_SPEED            = 5;
+const PLAYER_SPRINT_SPEED          = 9;
+const PLAYER_JUMP_VELOCITY         = 7;
+const PLAYER_GRAVITY               = 18;
+const PLAYER_EYE_HEIGHT            = 1.65;
+const PLAYER_THIRD_PERSON_DIST     = 4.0;
+const PLAYER_THIRD_PERSON_HEIGHT   = 1.2;
+const PLAYER_MOUSE_SENS            = 0.0024;
+
+const MUTANT_COUNT                 = 6;
+const MUTANT_PATROL_SPEED          = 1.5;
+const MUTANT_CHASE_SPEED_MULT      = 1.6;
+const MUTANT_DETECTION_RADIUS      = 14;
+const MUTANT_NIGHT_DETECTION_BONUS = 1.6;
+
+const WORLD_TREE_COUNT             = 80;
+const WORLD_ROCK_COUNT             = 30;
+const WORLD_STAR_COUNT             = 600;
+const WORLD_OCEAN_RADIUS           = 200;
+const WORLD_TERRAIN_SIZE           = 220;
+const WORLD_TERRAIN_SEGMENTS       = 140;
+
+// ===========================================================================
+// HEIGHTMAP — single source of truth for terrain elevation.
+// Used by terrain mesh, minimap, tree placement, mutant placement, and
+// player ground-follow. Do NOT duplicate this formula.
+// ===========================================================================
+function getHeight(x, z) {
+  const dist = Math.sqrt(x * x + z * z);
+  if (dist > 88) return -3;
+  const baseHeight = Math.max(0, 26 - dist * 0.3);
+  const ridge  = Math.sin(x * 0.08) * Math.cos(z * 0.08) * 1.4;
+  const detail = Math.sin(x * 0.22 + 1.3) * Math.cos(z * 0.19 - 0.7) * 0.6;
+  return baseHeight + ridge + detail;
+}
+
+function classifyBiome(height) {
+  if (height < 1) return 'sand';
+  if (height < 7) return 'grass';
+  return 'rock';
+}
+
+// ===========================================================================
+// SEEDED RNG — deterministic placement of trees/rocks across reloads.
+// ===========================================================================
+function makeRng(seed) {
+  let s = seed;
+  return () => {
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
+  };
+}
+
+// ===========================================================================
+// RENDERER + SCENE
+// ===========================================================================
+const canvas = document.getElementById('game-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x87aabd, 60, 180);
+scene.background = new THREE.Color(0x87aabd);
+
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ===========================================================================
+// LIGHTS — sun + moon + hemisphere
+// ===========================================================================
+const sun = new THREE.DirectionalLight(0xffe7c0, 1.0);
+const moon = new THREE.DirectionalLight(0x8090c0, 0.0);
+const hemi = new THREE.HemisphereLight(0xb6cce0, 0x3c2a18, 0.55);
+scene.add(sun); scene.add(moon); scene.add(hemi);
+
+// ===========================================================================
+// TERRAIN
+// ===========================================================================
+function buildTerrain() {
+  const geom = new THREE.PlaneGeometry(WORLD_TERRAIN_SIZE, WORLD_TERRAIN_SIZE, WORLD_TERRAIN_SEGMENTS, WORLD_TERRAIN_SEGMENTS);
+  geom.rotateX(-Math.PI / 2);
+  const colors = [];
+  const pos = geom.attributes.position;
+  const sandColor  = new THREE.Color(0xc7a36a);
+  const grassColor = new THREE.Color(0x4a6a32);
+  const rockColor  = new THREE.Color(0x6f6256);
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const z = pos.getZ(i);
+    const h = getHeight(x, z);
+    pos.setY(i, h);
+    const biome = classifyBiome(h);
+    const c = biome === 'sand' ? sandColor : biome === 'grass' ? grassColor : rockColor;
+    colors.push(c.r, c.g, c.b);
+  }
+  geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geom.computeVertexNormals();
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  return new THREE.Mesh(geom, mat);
+}
+scene.add(buildTerrain());
+
+// ===========================================================================
+// OCEAN
+// ===========================================================================
+{
+  const oceanGeom = new THREE.CircleGeometry(WORLD_OCEAN_RADIUS, 64);
+  oceanGeom.rotateX(-Math.PI / 2);
+  const oceanMat = new THREE.MeshLambertMaterial({ color: 0x2a5070, transparent: true, opacity: 0.85 });
+  const ocean = new THREE.Mesh(oceanGeom, oceanMat);
+  ocean.position.y = 0.2;
+  scene.add(ocean);
+}
+
+// ===========================================================================
+// TREES
+// ===========================================================================
+const treePositions = [];
+{
+  const treeGroup = new THREE.Group();
+  const tRng = makeRng(7);
+  const trunkMat  = new THREE.MeshLambertMaterial({ color: 0x4a3220 });
+  const leavesMat = new THREE.MeshLambertMaterial({ color: 0x2c5230, flatShading: true });
+  let tries = 0;
+  while (treePositions.length < WORLD_TREE_COUNT && tries < WORLD_TREE_COUNT * 10) {
+    tries++;
+    const angle = tRng() * Math.PI * 2;
+    const dist  = 8 + tRng() * 70;
+    const x = Math.cos(angle) * dist;
+    const z = Math.sin(angle) * dist;
+    const h = getHeight(x, z);
+    if (classifyBiome(h) !== 'grass') continue;
+    treePositions.push({ x, z, y: h });
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 2.6, 6), trunkMat);
+    trunk.position.set(x, h + 1.3, z);
+    const leaves = new THREE.Mesh(new THREE.ConeGeometry(1.4, 3.2, 7), leavesMat);
+    leaves.position.set(x, h + 4, z);
+    treeGroup.add(trunk);
+    treeGroup.add(leaves);
+  }
+  scene.add(treeGroup);
+}
+
+// ===========================================================================
+// ROCKS
+// ===========================================================================
+{
+  const rockGroup = new THREE.Group();
+  const rRng = makeRng(31);
+  const rockMat = new THREE.MeshLambertMaterial({ color: 0x6a625a, flatShading: true });
+  for (let i = 0; i < WORLD_ROCK_COUNT; i++) {
+    const angle = rRng() * Math.PI * 2;
+    const dist  = 5 + rRng() * 78;
+    const x = Math.cos(angle) * dist;
+    const z = Math.sin(angle) * dist;
+    const h = getHeight(x, z);
+    const sz = 0.5 + rRng() * 1.4;
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(sz, 0), rockMat);
+    rock.position.set(x, h + sz * 0.4, z);
+    rock.rotation.set(rRng() * 6, rRng() * 6, rRng() * 6);
+    rockGroup.add(rock);
+  }
+  scene.add(rockGroup);
+}
+
+// ===========================================================================
+// STARS
+// ===========================================================================
+const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.4, transparent: true, opacity: 0 });
+{
+  const starGeom = new THREE.BufferGeometry();
+  const positions = [];
+  const sRng = makeRng(101);
+  for (let i = 0; i < WORLD_STAR_COUNT; i++) {
+    const r = 280;
+    const theta = sRng() * Math.PI * 2;
+    const phi = Math.acos(2 * sRng() - 1) * 0.5;
+    positions.push(
+      r * Math.sin(phi) * Math.cos(theta),
+      r * Math.cos(phi) + 60,
+      r * Math.sin(phi) * Math.sin(theta),
+    );
+  }
+  starGeom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  scene.add(new THREE.Points(starGeom, starMat));
+}
+
+// ===========================================================================
+// PLAYER
+// ===========================================================================
+const player = {
+  pos: new THREE.Vector3(),
+  vel: new THREE.Vector3(),
+  yaw: 0,
+  pitch: 0,
+  onGround: false,
+  view: 'first',
+  body: new THREE.Group(),
+  stats: { stamina: 100, armor: 100, food: 100, drink: 100 },
+};
+
+// Spawn on a beach (approx dist=75 ring ⇒ sand)
+{
+  const spawnAngle = Math.random() * Math.PI * 2;
+  const spawnDist  = 75;
+  player.pos.x = Math.cos(spawnAngle) * spawnDist;
+  player.pos.z = Math.sin(spawnAngle) * spawnDist;
+  player.pos.y = getHeight(player.pos.x, player.pos.z) + PLAYER_EYE_HEIGHT;
+  player.yaw   = spawnAngle + Math.PI; // face inland
+}
+
+// Third-person body — only visible in 'third' mode
+{
+  const skinMat   = new THREE.MeshLambertMaterial({ color: 0xb98c5a });
+  const shirtMat  = new THREE.MeshLambertMaterial({ color: 0x6b4226 });
+  const pantsMat  = new THREE.MeshLambertMaterial({ color: 0x33251a });
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.4), shirtMat);
+  torso.position.y = -0.4;
+  player.body.add(torso);
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.36, 0.36), skinMat);
+  head.position.y = 0.18;
+  player.body.add(head);
+  const armL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.7, 0.18), shirtMat);
+  armL.position.set(-0.4, -0.4, 0); player.body.add(armL);
+  const armR = armL.clone(); armR.position.x = 0.4; player.body.add(armR);
+  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.85, 0.2), pantsMat);
+  legL.position.set(-0.16, -1.25, 0); player.body.add(legL);
+  const legR = legL.clone(); legR.position.x = 0.16; player.body.add(legR);
+  player.body.visible = false;
+  scene.add(player.body);
+}
+
+// ===========================================================================
+// MUTANTS — variation in heads (1-2), arms (2-3), legs (2-3)
+// ===========================================================================
+function makeMutant(id) {
+  const group = new THREE.Group();
+  const headCount = Math.random() < 0.35 ? 2 : 1;
+  const armCount  = Math.random() < 0.40 ? 3 : 2;
+  const legCount  = Math.random() < 0.30 ? 3 : 2;
+  const skinHex   = 0x735846 + Math.floor(Math.random() * 0x303030);
+  const skinMat   = new THREE.MeshLambertMaterial({ color: skinHex, flatShading: true });
+  const pantsMat  = new THREE.MeshLambertMaterial({ color: 0x3a2a1c });
+
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.0, 0.45), skinMat);
+  torso.position.y = -0.4;
+  group.add(torso);
+
+  for (let h = 0; h < headCount; h++) {
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.32, 0.32), skinMat);
+    head.position.set((h - (headCount - 1) / 2) * 0.34, 0.25, 0);
+    group.add(head);
+  }
+  for (let a = 0; a < armCount; a++) {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.8, 0.16), skinMat);
+    const side = a === 0 ? -1 : a === 1 ? 1 : 0;
+    arm.position.set(side * 0.42, -0.4, a >= 2 ? 0.25 : 0);
+    group.add(arm);
+  }
+  for (let l = 0; l < legCount; l++) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.9, 0.2), pantsMat);
+    const side = l === 0 ? -1 : l === 1 ? 1 : 0;
+    leg.position.set(side * 0.18, -1.35, l >= 2 ? 0.22 : 0);
+    group.add(leg);
+  }
+
+  const cx = (Math.random() - 0.5) * 100;
+  const cz = (Math.random() - 0.5) * 100;
+  const ch = getHeight(cx, cz);
+  group.position.set(cx, ch + 1.5, cz);
+  scene.add(group);
+
+  return {
+    id, group,
+    home: new THREE.Vector2(cx, cz),
+    target: new THREE.Vector2(cx, cz),
+    repick: 0,
+    aware: false,
+    variation: { heads: headCount, arms: armCount, legs: legCount },
+  };
+}
+const mutants = [];
+for (let i = 0; i < MUTANT_COUNT; i++) mutants.push(makeMutant(i));
+
+// ===========================================================================
+// TIME / DAY-NIGHT CYCLE
+// ===========================================================================
+const time = {
+  day: 1,
+  hour: TIME_DAY_START_HOUR,
+  realElapsedSec: 0,
+  newDayThisFrame: false,
+};
+function isNight(h) {
+  return h < TIME_DAY_START_HOUR || h >= (TIME_DAY_START_HOUR + TIME_DAYLIGHT_HOURS);
+}
+function updateTime(dt) {
+  time.realElapsedSec += dt;
+  time.hour += TIME_GAME_HOURS_PER_REAL_SEC * dt;
+  time.newDayThisFrame = false;
+  if (time.hour >= TIME_GAME_HOURS_PER_DAY) {
+    time.hour -= TIME_GAME_HOURS_PER_DAY;
+    time.day += 1;
+    time.newDayThisFrame = true;
+  }
+}
+const skyDayColor    = new THREE.Color(0x87aabd);
+const skySunsetColor = new THREE.Color(0xd6814a);
+const skyNightColor  = new THREE.Color(0x0a1226);
+function updateSky() {
+  const dawn = TIME_DAY_START_HOUR;
+  const dusk = TIME_DAY_START_HOUR + TIME_DAYLIGHT_HOURS;
+  const isDay = time.hour >= dawn && time.hour < dusk;
+  const dayT  = isDay ? (time.hour - dawn) / TIME_DAYLIGHT_HOURS : -1;
+
+  if (isDay) {
+    const angle = dayT * Math.PI;
+    sun.position.set(Math.cos(angle) * 80, Math.sin(angle) * 80, 30);
+    sun.intensity  = 0.4 + Math.sin(dayT * Math.PI) * 0.7;
+    moon.intensity = 0;
+  } else {
+    sun.intensity = 0;
+    const nightT  = time.hour >= dusk
+      ? (time.hour - dusk) / TIME_NIGHT_HOURS
+      : (time.hour + (TIME_GAME_HOURS_PER_DAY - dusk)) / TIME_NIGHT_HOURS;
+    const angle = nightT * Math.PI;
+    moon.position.set(-Math.cos(angle) * 80, Math.sin(angle) * 80, 30);
+    moon.intensity = 0.18;
+  }
+
+  let bg;
+  if (isDay) {
+    const edge = Math.max(0, Math.abs(dayT - 0.5) * 2.2 - 0.6);
+    bg = skyDayColor.clone().lerp(skySunsetColor, edge);
+  } else {
+    bg = skyNightColor;
+  }
+  scene.background = bg;
+  scene.fog.color  = bg;
+  starMat.opacity  = isDay ? 0 : 0.85;
+  hemi.intensity   = isDay ? 0.55 : 0.18;
+}
+
+// ===========================================================================
+// INPUT
+// ===========================================================================
+const keys = {};
+let mouseDX = 0, mouseDY = 0, pointerLocked = false;
+
+window.addEventListener('keydown', (e) => {
+  keys[e.code] = true;
+  if (e.code === 'KeyV') togglePlayerView();
+});
+window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+canvas.addEventListener('click', () => { if (!pointerLocked) canvas.requestPointerLock(); });
+document.addEventListener('pointerlockchange', () => {
+  pointerLocked = document.pointerLockElement === canvas;
+});
+document.addEventListener('mousemove', (e) => {
+  if (pointerLocked) { mouseDX += e.movementX; mouseDY += e.movementY; }
+});
+
+function togglePlayerView() {
+  player.view = player.view === 'first' ? 'third' : 'first';
+  document.getElementById('view-mode').textContent =
+    player.view === 'first' ? 'First Person' : 'Third Person';
+  player.body.visible = player.view === 'third';
+}
+
+// ===========================================================================
+// PLAYER CONTROLLER
+// ===========================================================================
+function updatePlayer(dt) {
+  // look
+  player.yaw   -= mouseDX * PLAYER_MOUSE_SENS;
+  player.pitch -= mouseDY * PLAYER_MOUSE_SENS;
+  player.pitch = Math.max(-1.4, Math.min(1.4, player.pitch));
+  mouseDX = 0; mouseDY = 0;
+
+  // movement
+  const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
+  const right   = new THREE.Vector3( Math.cos(player.yaw), 0, -Math.sin(player.yaw));
+  const moveDir = new THREE.Vector3();
+  if (keys['KeyW']) moveDir.add(forward);
+  if (keys['KeyS']) moveDir.sub(forward);
+  if (keys['KeyA']) moveDir.sub(right);
+  if (keys['KeyD']) moveDir.add(right);
+  const sprinting = (keys['ShiftLeft'] || keys['ShiftRight']) && player.stats.stamina > 1 && moveDir.lengthSq() > 0;
+  const speed = sprinting ? PLAYER_SPRINT_SPEED : PLAYER_WALK_SPEED;
+  if (moveDir.lengthSq() > 0) moveDir.normalize().multiplyScalar(speed);
+  player.vel.x = moveDir.x;
+  player.vel.z = moveDir.z;
+
+  // gravity / jump
+  player.vel.y -= PLAYER_GRAVITY * dt;
+  if (keys['Space'] && player.onGround) {
+    player.vel.y = PLAYER_JUMP_VELOCITY;
+    player.onGround = false;
+  }
+  player.pos.addScaledVector(player.vel, dt);
+
+  // ground follow
+  const groundY = getHeight(player.pos.x, player.pos.z) + PLAYER_EYE_HEIGHT;
+  if (player.pos.y <= groundY) {
+    player.pos.y = groundY;
+    player.vel.y = 0;
+    player.onGround = true;
+  }
+
+  // body follows (visible in third-person)
+  player.body.position.set(player.pos.x, player.pos.y - PLAYER_EYE_HEIGHT + 1.0, player.pos.z);
+  player.body.rotation.y = player.yaw;
+
+  // stats
+  if (sprinting) {
+    player.stats.stamina = Math.max(0, player.stats.stamina - STATS_STAMINA_SPRINT_DRAIN_PER_SEC * dt);
+  } else {
+    player.stats.stamina = Math.min(100, player.stats.stamina + STATS_STAMINA_REGEN_PER_SEC * dt);
+  }
+  const dh = TIME_GAME_HOURS_PER_REAL_SEC * dt;
+  player.stats.food  = Math.max(0, player.stats.food  - STATS_FOOD_DECAY_PER_HR  * dh);
+  player.stats.drink = Math.max(0, player.stats.drink - STATS_DRINK_DECAY_PER_HR * dh);
+  if (player.stats.food <= 0 || player.stats.drink <= 0) {
+    player.stats.armor = Math.max(0, player.stats.armor - STATS_STARVE_ARMOR_DRAIN_PER_HR * dh);
+  }
+  return { sprinting };
+}
+
+// ===========================================================================
+// CAMERA
+// ===========================================================================
+function updateCamera() {
+  if (player.view === 'first') {
+    camera.position.copy(player.pos);
+    const dir = new THREE.Vector3(
+      -Math.sin(player.yaw) * Math.cos(player.pitch),
+       Math.sin(player.pitch),
+      -Math.cos(player.yaw) * Math.cos(player.pitch),
+    );
+    camera.lookAt(player.pos.clone().add(dir));
+  } else {
+    const back = new THREE.Vector3(Math.sin(player.yaw), 0, Math.cos(player.yaw))
+      .multiplyScalar(PLAYER_THIRD_PERSON_DIST);
+    camera.position.copy(player.pos).add(back);
+    camera.position.y += PLAYER_THIRD_PERSON_HEIGHT;
+    camera.lookAt(player.pos);
+  }
+}
+
+// ===========================================================================
+// MUTANTS UPDATE
+// ===========================================================================
+function updateMutants(dt) {
+  let nearest = Infinity;
+  const detectRadius = MUTANT_DETECTION_RADIUS * (isNight(time.hour) ? MUTANT_NIGHT_DETECTION_BONUS : 1);
+  for (const m of mutants) {
+    m.repick -= dt;
+    if (m.repick <= 0) {
+      m.repick = 3 + Math.random() * 4;
+      m.target.set(m.home.x + (Math.random() - 0.5) * 12, m.home.y + (Math.random() - 0.5) * 12);
+    }
+    const pdx = player.pos.x - m.group.position.x;
+    const pdz = player.pos.z - m.group.position.z;
+    const pd  = Math.hypot(pdx, pdz);
+    m.aware = pd < detectRadius;
+
+    if (m.aware) {
+      const v = MUTANT_PATROL_SPEED * MUTANT_CHASE_SPEED_MULT * dt;
+      m.group.position.x += (pdx / pd) * v;
+      m.group.position.z += (pdz / pd) * v;
+      m.group.rotation.y = Math.atan2(pdx, pdz);
+    } else {
+      const dx = m.target.x - m.group.position.x;
+      const dz = m.target.y - m.group.position.z;
+      const dl = Math.hypot(dx, dz);
+      if (dl > 0.1) {
+        m.group.position.x += (dx / dl) * MUTANT_PATROL_SPEED * dt;
+        m.group.position.z += (dz / dl) * MUTANT_PATROL_SPEED * dt;
+        m.group.rotation.y = Math.atan2(dx, dz);
+      }
+    }
+    m.group.position.y = getHeight(m.group.position.x, m.group.position.z) + 1.5;
+    if (pd < nearest) nearest = pd;
+  }
+  return { nearestMutantDist: nearest };
+}
+
+// ===========================================================================
+// HUD — caches every value to avoid per-frame DOM writes
+// ===========================================================================
+const hudCache = {
+  stamina: -1, armor: -1, food: -1, drink: -1,
+  day: -1, gameTime: '', realTime: '', phase: '', threat: '',
+};
+const barEls = {};
+['stamina', 'armor', 'food', 'drink'].forEach((key) => {
+  const el = document.querySelector(`#energy-bars .bar[data-stat="${key}"]`);
+  barEls[key] = { fill: el.querySelector('.bar-fill'), value: el.querySelector('.bar-value') };
+});
+function fmtTime(h) {
+  const hours = Math.floor((h + 6) % 24);
+  const mins  = Math.floor((h % 1) * 60);
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+}
+function fmtReal(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+}
+function getPhase(h) {
+  if (isNight(h)) return 'Night';
+  if (h < TIME_DAY_START_HOUR + 1) return 'Dawn';
+  if (h > TIME_DAY_START_HOUR + TIME_DAYLIGHT_HOURS - 1) return 'Dusk';
+  return 'Day';
+}
+function updateHud(threat) {
+  for (const key of ['stamina', 'armor', 'food', 'drink']) {
+    const v = Math.round(player.stats[key]);
+    if (v !== hudCache[key]) {
+      hudCache[key] = v;
+      barEls[key].fill.style.width = v + '%';
+      barEls[key].value.textContent = String(v);
+      barEls[key].fill.classList.toggle('low', v < 25);
+    }
+  }
+  if (time.day !== hudCache.day) {
+    hudCache.day = time.day;
+    document.getElementById('day-num').textContent = String(time.day);
+  }
+  const gt = fmtTime(time.hour);
+  if (gt !== hudCache.gameTime) {
+    hudCache.gameTime = gt;
+    document.getElementById('game-time').textContent = gt;
+  }
+  const rt = fmtReal(time.realElapsedSec);
+  if (rt !== hudCache.realTime) {
+    hudCache.realTime = rt;
+    document.getElementById('real-time').textContent = rt;
+  }
+  const phase = getPhase(time.hour);
+  if (phase !== hudCache.phase) {
+    hudCache.phase = phase;
+    document.getElementById('phase').textContent = phase;
+  }
+  // threat
+  const tEl = document.getElementById('threat');
+  let label = 'Calm', cls = '';
+  if (threat.nearestMutantDist < 8)        { label = 'Danger'; cls = 'danger'; }
+  else if (threat.nearestMutantDist < 18)  { label = 'Wary';   cls = 'alert';  }
+  if (label !== hudCache.threat) {
+    hudCache.threat = label;
+    tEl.textContent = label;
+    tEl.className = '';
+    if (cls) tEl.classList.add(cls);
+  }
+}
+
+// ===========================================================================
+// MINIMAP — bake island bitmap once, redraw per-frame overlays only
+// ===========================================================================
+const mini = document.getElementById('minimap');
+const mctx = mini.getContext('2d');
+const MAP_RANGE = 100;
+const MAP_PX = mini.width;
+const islandBmp = (() => {
+  const off = document.createElement('canvas');
+  off.width = MAP_PX; off.height = MAP_PX;
+  const c = off.getContext('2d');
+  for (let py = 0; py < MAP_PX; py++) {
+    for (let px = 0; px < MAP_PX; px++) {
+      const wx = ((px / MAP_PX) - 0.5) * 2 * MAP_RANGE;
+      const wz = ((py / MAP_PX) - 0.5) * 2 * MAP_RANGE;
+      const h = getHeight(wx, wz);
+      const b = classifyBiome(h);
+      c.fillStyle = h < 0 ? '#1d3247'
+        : b === 'sand'  ? '#9c7a4d'
+        : b === 'grass' ? '#3b5524'
+        :                 '#5e544a';
+      c.fillRect(px, py, 1, 1);
+    }
+  }
+  return off;
+})();
+function drawMinimap() {
+  mctx.drawImage(islandBmp, 0, 0);
+  for (const m of mutants) {
+    const px = MAP_PX * (0.5 + m.group.position.x / (2 * MAP_RANGE));
+    const py = MAP_PX * (0.5 + m.group.position.z / (2 * MAP_RANGE));
+    mctx.fillStyle = m.aware ? '#ff6b3d' : '#a04030';
+    mctx.fillRect(px - 1.5, py - 1.5, 3, 3);
+  }
+  const px = MAP_PX * (0.5 + player.pos.x / (2 * MAP_RANGE));
+  const py = MAP_PX * (0.5 + player.pos.z / (2 * MAP_RANGE));
+  mctx.fillStyle = '#e8b557';
+  mctx.beginPath(); mctx.arc(px, py, 2.5, 0, Math.PI * 2); mctx.fill();
+  mctx.strokeStyle = '#e8b557'; mctx.lineWidth = 1;
+  mctx.beginPath();
+  mctx.moveTo(px, py);
+  mctx.lineTo(px - Math.sin(player.yaw) * 8, py - Math.cos(player.yaw) * 8);
+  mctx.stroke();
+}
+
+// ===========================================================================
+// BANNER
+// ===========================================================================
+const bannerEl = document.getElementById('banner');
+const bannerTitleEl = bannerEl.querySelector('.title');
+const bannerSubEl   = bannerEl.querySelector('.sub');
+let bannerTimer = 0;
+function showBanner(text, sub = '', durationMs = 2400) {
+  bannerTitleEl.textContent = text;
+  bannerSubEl.textContent   = sub;
+  bannerEl.classList.add('visible');
+  clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(() => bannerEl.classList.remove('visible'), durationMs);
+}
+
+// ===========================================================================
+// GAME LOOP
+// ===========================================================================
+let last = performance.now() / 1000;
+function frame() {
+  const now = performance.now() / 1000;
+  let dt = now - last;
+  last = now;
+  if (dt > 0.05) dt = 0.05;
+  updateTime(dt);
+  if (time.newDayThisFrame) showBanner(`Day ${time.day}`, 'You wake again.');
+  updateSky();
+  updatePlayer(dt);
+  const threat = updateMutants(dt);
+  updateCamera();
+  updateHud(threat);
+  drawMinimap();
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+// ===========================================================================
+// START
+// ===========================================================================
+const startScreen = document.getElementById('start-screen');
+startScreen.addEventListener('click', () => {
+  startScreen.classList.add('hidden');
+  canvas.requestPointerLock();
+  showBanner('You wake on the sand.', 'Day 1 — Survive.', 3200);
+  last = performance.now() / 1000;
+  requestAnimationFrame(frame);
+});
+</script>
+</body>
+</html>
