@@ -1,12 +1,11 @@
 import * as THREE from 'three';
-import type { MutantVariation } from '@/types';
 
 export interface Mutant {
   id: number;
-  group: THREE.Group;
+  sprite: THREE.Sprite;
   home: THREE.Vector2;
   target: THREE.Vector2;
   repick: number;
   aware: boolean;
-  variation: MutantVariation;
+  variantUrl: string;
 }
