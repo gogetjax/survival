@@ -1,0 +1,183 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  background: #050402; color: #e8b557;
+  font-family: 'Special Elite', monospace;
+  user-select: none;
+}
+#game-canvas { display: block; width: 100vw; height: 100vh; }
+#hud { position: fixed; inset: 0; pointer-events: none; }
+
+/* ----- Energy bars (top-left) ----- */
+#energy-bars { position: absolute; top: 18px; left: 18px; width: 240px; }
+.bar {
+  margin-bottom: 8px; padding: 6px 10px;
+  background: rgba(8, 6, 4, 0.85);
+  border: 1px solid rgba(232, 181, 87, 0.5);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%);
+}
+.bar-label {
+  font-family: 'Cinzel', serif; font-weight: 600;
+  font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: #e8b557; margin-bottom: 4px;
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.bar-value { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #c89742; }
+.bar-fill-wrap {
+  width: 100%; height: 8px;
+  background: rgba(40, 28, 16, 0.9);
+  border: 1px solid rgba(80, 50, 25, 0.7);
+}
+.bar-fill {
+  height: 100%; width: 100%;
+  background: linear-gradient(90deg, #b8862f 0%, #e8b557 100%);
+  transition: width 0.18s ease;
+}
+.bar-fill.low { background: linear-gradient(90deg, #6a2b1c 0%, #b54a2a 100%); }
+
+/* ----- Time panel (top-right) ----- */
+#time-panel {
+  position: absolute; top: 18px; right: 18px;
+  background: rgba(8, 6, 4, 0.85);
+  border: 1px solid rgba(232, 181, 87, 0.5);
+  padding: 10px 14px; min-width: 220px;
+  clip-path: polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px);
+}
+#time-panel .heading {
+  font-family: 'Cinzel', serif; font-weight: 800;
+  font-size: 14px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: #e8b557; margin-bottom: 6px; text-align: center;
+}
+#time-panel .row {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: #c89742;
+  display: flex; justify-content: space-between; margin: 2px 0;
+}
+#time-panel .row .label { color: #8a6a32; }
+
+/* ----- Minimap (bottom-right) ----- */
+#minimap-wrap { position: absolute; bottom: 18px; right: 18px; }
+#minimap {
+  width: 180px; height: 180px; display: block;
+  background: rgba(8, 6, 4, 0.85);
+  border: 1px solid rgba(232, 181, 87, 0.5);
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+#minimap-label {
+  font-family: 'Cinzel', serif; font-size: 10px;
+  letter-spacing: 0.18em; text-transform: uppercase; color: #8a6a32;
+  text-align: center; margin-top: 4px;
+}
+
+/* ----- Hotbar (bottom-center) ----- */
+#hotbar {
+  position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 6px;
+}
+.slot {
+  width: 44px; height: 44px;
+  background: rgba(8, 6, 4, 0.85);
+  border: 1px solid rgba(232, 181, 87, 0.4);
+  font-family: 'Cinzel', serif; font-size: 11px; color: #8a6a32;
+  display: flex; align-items: center; justify-content: center; position: relative;
+}
+.slot.active {
+  border-color: #e8b557; color: #e8b557;
+  box-shadow: inset 0 0 8px rgba(232, 181, 87, 0.3);
+}
+.slot .num {
+  position: absolute; top: 2px; left: 4px;
+  font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #6a4a22;
+}
+
+/* ----- View mode (top-center) ----- */
+#view-mode {
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  font-family: 'Cinzel', serif; font-size: 11px;
+  letter-spacing: 0.2em; text-transform: uppercase; color: #8a6a32;
+  background: rgba(8, 6, 4, 0.7); padding: 4px 12px;
+  border: 1px solid rgba(232, 181, 87, 0.3);
+}
+
+/* ----- Banner (centered) ----- */
+#banner {
+  position: absolute; top: 22%; left: 50%; transform: translateX(-50%);
+  text-align: center; opacity: 0; transition: opacity 0.4s ease;
+}
+#banner.visible { opacity: 1; }
+#banner .title {
+  font-family: 'Cinzel', serif; font-weight: 800;
+  font-size: 32px; letter-spacing: 0.18em; color: #e8b557;
+  text-shadow: 0 2px 16px rgba(0,0,0,0.9);
+}
+#banner .sub {
+  font-family: 'Special Elite', monospace; font-size: 14px;
+  color: #c89742; margin-top: 6px;
+}
+
+/* ----- Threat indicator (bottom-left) ----- */
+#threat {
+  position: absolute; bottom: 18px; left: 18px;
+  font-family: 'Cinzel', serif; font-size: 11px;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  padding: 6px 12px;
+  background: rgba(8, 6, 4, 0.85);
+  border: 1px solid rgba(232, 181, 87, 0.4);
+  color: #8a6a32;
+}
+#threat.alert { color: #e8b557; border-color: #e8b557; }
+#threat.danger {
+  color: #ff6b3d; border-color: #ff6b3d;
+  animation: pulse 0.8s infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+/* ----- Crosshair ----- */
+#crosshair {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px; height: 14px; opacity: 0.7;
+}
+#crosshair::before, #crosshair::after { content: ''; position: absolute; background: #e8b557; }
+#crosshair::before { left: 50%; top: 0; width: 1px; height: 100%; transform: translateX(-50%); }
+#crosshair::after { top: 50%; left: 0; height: 1px; width: 100%; transform: translateY(-50%); }
+
+/* ----- Controls help (above threat indicator) ----- */
+#controls-help {
+  position: absolute; bottom: 60px; left: 18px;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  color: #6a4a22; line-height: 1.6;
+}
+#controls-help .key { color: #8a6a32; font-weight: 700; }
+
+/* ----- FX overlay (vignette / damage flash) ----- */
+#fx-overlay {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%);
+  transition: opacity 0.5s ease;
+}
+#fx-overlay.damage {
+  background: radial-gradient(ellipse at center, transparent 30%, rgba(120, 20, 10, 0.5) 100%);
+}
+
+/* ----- Start screen ----- */
+#start-screen {
+  position: fixed; inset: 0; background: #050402;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 1000; cursor: pointer;
+}
+#start-screen h1 {
+  font-family: 'Cinzel', serif; font-weight: 800;
+  font-size: 48px; letter-spacing: 0.2em; color: #e8b557;
+  text-align: center; margin-bottom: 16px;
+}
+#start-screen .tag {
+  font-family: 'Special Elite', monospace; font-size: 14px;
+  color: #8a6a32; margin-bottom: 36px;
+}
+#start-screen .prompt {
+  font-family: 'Cinzel', serif; font-size: 14px;
+  letter-spacing: 0.2em; color: #c89742;
+  border: 1px solid #c89742; padding: 12px 28px;
+}
+#start-screen.hidden { display: none; }
