@@ -108,6 +108,14 @@ src/
 │   └── hud.css
 └── types/
     └── index.ts
+
+docs/
+├── README.md
+├── changelog.md
+└── mechanics/
+    ├── combat.md
+    ├── movement.md
+    └── (one file per gameplay system)
 ```
 
 ### Conventions
@@ -162,6 +170,11 @@ Each build is one self-contained PR.
 - **Always** add at least one Vitest test for any new pure function in `/world`, `/time`, or `/persistence`.
 - **Always** keep the HUD performant — only mutate `textContent` when the displayed value actually changed (cache last-displayed values).
 - **Don't** prematurely optimize 3D rendering. ~100 trees and ~10 mutants is fine without instancing.
+- **Always** update `docs/` when a build changes gameplay. Specifically:
+  - New mechanic → new file in `docs/mechanics/`.
+  - Changed tunable, behavior, or rule → update the relevant existing mechanics file.
+  - Every build → append an entry to `docs/changelog.md`.
+- **Never** duplicate balance numbers between `src/config/balance.ts` and the docs. Docs explain *what* and *why*; the config is the *truth*. Link, don't copy.
 
 ## 6. Glossary
 
